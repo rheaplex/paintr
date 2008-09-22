@@ -1,0 +1,23 @@
+Installing paintr
+-----------------
+
+To use paintr you will need the following installed:
+PHP
+phpFlickr
+These may have additional dependencies.
+
+To run paintr locally use a command line like:
+
+   /usr/local/php5/bin/php paintr.php 
+
+To run paintr from a web server, copy this folder to your web server documents 
+directory. Make sure that php (i.e. the web server) can write to the paintr 
+directory, and that it can write to the file current.id . 
+
+
+Note
+----
+
+To compile the fullscreen app use:
+
+javac -classpath /System/library/Java:. paintr_fullscreen.java

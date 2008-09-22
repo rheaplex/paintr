@@ -1,0 +1,35 @@
+paintr Release Notes
+----------------------
+
+Please see the paintr website for the latest news about the project. 
+This file contains the release notes for the current release.
+
+paintr 0.2 GPL 3
+================
+
+Updated licence to GPL 3.
+
+Removed third party libraries, user will have to install those.
+
+
+paintr 0.2
+==========
+
+Fixed bug that caused paintr to use non-CC work from flickr.
+
+Fixed bug that caused paintr to not get work page URL from flickr.
+
+Updated PEAR to new version and changed code to reflect this.
+
+
+paintr 0.1
+==========
+
+Initial release.
+
+colr rss scraping api, autotrace and simple wordnet interface. Basic 
+functionality.
+
+paintr gets the latest palette from colr, finds an image with matching tags at
+flickr, autotraces the image, and applies the palette to the xml. It then
+describes what it has done in an html file linked to the resulting svg file.
