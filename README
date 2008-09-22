@@ -1,0 +1,22 @@
+paintr
+------
+
+paintr is a web service that creates original images. 
+
+To use paintr you will need the following installed:
+    PHP
+    phpFlickr
+These may have other dependencies.
+
+To run paintr locally use a command line like:
+
+   /usr/local/php/bin/php paintr.php 
+
+To run paintr from a web server, copy this folder to your web server documents 
+directory. Make sure that php (i.e. the web server) can write to the paintr 
+directory, and that it can write to the file current.id . 
+
+I had the idea for paintr on 19th May 2005. The original title for the project 
+was ``Artomator''. It was inspired by autodr, and in response to Harold Cohen's 
+``Off The Shelf''. The colour handling routines were inspired by Cohen's 
+``Colouring Without Seeing''. 
