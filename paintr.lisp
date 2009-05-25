@@ -99,8 +99,13 @@
   (multiple-value-bind (body code) 
       (drakma:http-request "http://colr.org/rss/scheme/random")
     (if (= code 200)
-      body
-      nil)))
+	(ppcre:register-groups-bind 
+	 (palette) 
+	 ((ppcre:create-scanner "<item>(.+?)</item>" 
+				:single-line-mode t) 
+	  body)
+	 palette)
+	nil)))
 
 (defun palette-name (palette)
   "Get the name from the palette XML"
