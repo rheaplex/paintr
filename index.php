@@ -1,6 +1,6 @@
 <?php
 
-// Copyright 2005 Rob Myers <rob@robmyers.org>    
+// Copyright 2005, 2009 Rob Myers <rob@robmyers.org>    
 //     
 // This file is part of paintr.
 // 
@@ -17,9 +17,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-require_once 'current_id.php';
-
-load_current_id ("./");
+$id_string = file_get_contents ("./current-id");
+$current_id = 0 + $id_string;
 
 // Get the current image id
 // Make damn sure it's an int and is in range
@@ -52,10 +51,7 @@ p {font-size:8pt}
 <head>
 <body>
 <h1>paintr</h1><hr />
-<p><applet code='paintr_applet.class' codebase='.' width='540' height='405'>
-  <?php echo "<param name='url' value='http://paintr.robmyers.org/$id.svg'>"?>
-  You will need Java enabled to see this image.
-</applet></p>
+<p><embed src="<?php echo "./$id.svgz"?>" width="500" height="500" /></p>
 <?php
 // Would be bad if we were using a string or not constrained.
 echo file_get_contents ("./" . $id . ".html");
