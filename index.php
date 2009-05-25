@@ -26,8 +26,7 @@ $id = (int)$_GET['image'];
 if ($id)
   {
     $id = 0 + $id;
-    if (($id < ($current_id - 20)) ||
-	($id < 1))
+    if ($id < 1)
       {
 	$id = 1;
       }
