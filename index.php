@@ -22,7 +22,7 @@ $current_id = 0 + $id_string;
 
 // Get the current image id
 // Make damn sure it's an int and is in range
-$id = $_GET['image'];
+$id = (int)$_GET['image'];
 if ($id)
   {
     $id = 0 + $id;
