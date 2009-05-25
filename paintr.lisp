@@ -71,21 +71,24 @@
 
 (defparameter +current-id+ 0)
 
-(defparameter +current-id-file+ "./current-id")
+(defparameter +current-id-file+ "current-id")
 
 (defun load-current-id ()
   "Load or create the current id"
-  (when (probe-file +current-id-file+)
-    (with-open-file (id-file +current-id-file+)
-      (setf +current-id+ (read id-file))))
+  (let ((id-file-path (format nil "~a/~a" +paintr-directory-path+
+			      +current-id-file+)))
+    (when (probe-file id-file-path)
+      (with-open-file (id-file id-file-path)
+	(setf +current-id+ (read id-file)))))
   (incf +current-id+))
 
 (defun save-current-id ()
   "Save the current id"
-  (with-open-file (id-file +current-id-file+ 
+  (with-open-file (id-file (format nil "~a/~a" +paintr-directory-path+
+				   +current-id-file+)
 			   :direction :output
 			   :if-exists :supersede)
-    (print +current-id+ id-file)))
+    (format id-file "~a" +current-id+)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Colr
@@ -215,10 +218,10 @@
 
 (defun photo-html-url (the-photo-id person-xml)
   "Construct the html url for a single photo from its xml and its user details"
-  (format nil "~a/~a/" (person-photos-url person-xml) the-photo-id))
+  (format nil "~a~a/" (person-photos-url person-xml) the-photo-id))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Recolouring SVG
+;; SVG
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun choose-randomly (choices)
@@ -228,7 +231,8 @@
 
 (defun random-style (colour-list)
   "Generate a random colour style string"
-  (format nil "style=\"fill#~a stroke:none ;\"" (choose-randomly colour-list)))
+  (format nil "style=\"fill: #~a; stroke: none;\"" 
+	  (choose-randomly colour-list)))
 
 (defun recolour-svg (svg-text colour-list)
   "Replace all the styles in the svg with a random colour style"
@@ -237,6 +241,19 @@
 			   #'(lambda (match &rest registers)
 			       (declare (ignore match registers))
 			       (random-style colour-list))))
+
+(defun svg-dimensions (svg-text)
+  "Get the width and height of the svg file"
+  (ppcre:register-groups-bind (width height) 
+			      ("<svg width=\"([^\"]+)\" height=\"([^\"])+\">"
+			       svg-text)
+			      (values width height)))
+
+(defun fix-svg (svg-text)
+  "Fix autotrace's svg header for Firefox"
+  (ppcre:regex-replace "\<svg"
+		       svg-text
+		       "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\"> <svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\""))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; HTML Fragment generation
@@ -262,8 +279,7 @@ which had the " . tag_or_tags ($flickr_photo_tags) .  " " .
 		     photousername)
   "Save an html fragment describing how the work was made and satisfying BY-SA"
   (with-open-file (file filename :direction :output :if-exists :supersede)
-    (format file
-	    "<strong>How I made this image.</strong><br />~%I found a palette at colr called '~a' with the following ~a: ~a.<br />~%I searched for those tags on flickr and found an image called <a href=\"~a\">~a</a> by ~a.<br />~%I traced that using autotrace and applied the colr palette to it.<br />~%This image is licenced under the <a href='http://creativecommons.org/licenses/by-sa/3.0/'>~%Creative Commons Attribution Share-Alike Licence</a>"
+    (format file "<strong>How I made this image.</strong><br />~%I found a palette at colr called '~a' with the following ~a: ~a.<br />~%I searched for those tags on flickr and found an image called <a href=\"~a\">~a</a> by ~a.<br />~%I traced that using autotrace and applied the colr palette to it.<br />~%This image is licenced under the <a href='http://creativecommons.org/licenses/by-sa/3.0/'>~%Creative Commons Attribution Share-Alike Licence</a>"
 	    palette-name
 	    (tag-or-tags palette-tags)
 	    (format-tags palette-tags)
@@ -316,14 +332,14 @@ which had the " . tag_or_tags ($flickr_photo_tags) .  " " .
 	  (let ((photoxml (flickr-photo-tag-search paltags)))
 	    (when photoxml
 	      (let ((photoname (photo-title photoxml))
-		    (photourl (photo-url photoxml))
+		    (photojpegurl (photo-jpeg-url photoxml))
 		    (photoid (photo-id photoxml))
 		    (photouserid (photo-owner-id photoxml)))
-		(when (and photoname photourl photouserid)
+		(when (and photoname photojpegurl photouserid)
 		  (let ((photouserxml (flickr-person-details photouserid)))
 		    (when photouserxml
 		      (let ((photousername (person-username photouserxml)))
-			(wget photourl (jpeg-file-path))
+			(wget photojpegurl (jpeg-file-path))
 			(autotrace (jpeg-file-path) 
 				   (svg-file-path) 
 				   (length palcolours))
@@ -331,7 +347,8 @@ which had the " . tag_or_tags ($flickr_photo_tags) .  " " .
 			  (with-open-file (file (svg-file-path))
 			    (setf svg-text (make-string (file-length file)))
 			    (read-sequence svg-text file))
-			  (recolour-svg svg-text palcolours)
+			  (setf svg-text (fix-svg svg-text))
+			  (setf svg-text (recolour-svg svg-text palcolours))
 			  (with-open-file (file (svg-file-path) 
 						:direction :output 
 						:if-exists :supersede)
