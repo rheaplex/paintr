@@ -28,8 +28,8 @@
 ;; Set these by loading a Lisp file before this one that defvars them.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defvar +paintr-directory-path+ "./")
-(defvar +flickr-api-key+ "")
+(defvar *paintr-directory-path* "./")
+(defvar *flickr-api-key* "")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Utilities
@@ -75,7 +75,7 @@
 
 (defun load-current-id ()
   "Load or create the current id"
-  (let ((id-file-path (format nil "~a/~a" +paintr-directory-path+
+  (let ((id-file-path (format nil "~a/~a" *paintr-directory-path*
 			      +current-id-file+)))
     (when (probe-file id-file-path)
       (with-open-file (id-file id-file-path)
@@ -84,7 +84,7 @@
 
 (defun save-current-id ()
   "Save the current id"
-  (with-open-file (id-file (format nil "~a/~a" +paintr-directory-path+
+  (with-open-file (id-file (format nil "~a/~a" *paintr-directory-path*
 				   +current-id-file+)
 			   :direction :output
 			   :if-exists :supersede)
@@ -137,11 +137,10 @@
 			   :method :get
 			   :parameters 
 			   (list '("method" ."flickr.photos.search")
-				 (cons "api_key" +flickr-api-key+)
+				 (cons "api_key" *flickr-api-key*)
 				 (cons "tags" (format nil "~{~a~^,~}" tags))
 				 '("license" . "5") ;; BY-SA
 				 '("per_page" . "1")))
-    
     (if (= code 200)
       body
       nil)))
@@ -197,7 +196,7 @@
       (drakma:http-request "http://api.flickr.com/services/rest/"
 			   :parameters 
 			   (list '("method" . "flickr.people.getInfo")
-				 (cons "api_key" +flickr-api-key+)
+				 (cons "api_key" *flickr-api-key*)
 				 (cons "user_id" user-id)))
     (if (= code 200)
       body
@@ -302,19 +301,19 @@ which had the " . tag_or_tags ($flickr_photo_tags) .  " " .
 
 (defun svg-file-path ()
   "The absolute file path for the current svg file"
-  (format nil "~a/~a.svg" +paintr-directory-path+ +current-id+))
+  (format nil "~a/~a.svg" *paintr-directory-path* +current-id+))
 
 (defun svg-gz-file-path ()
   "The absolute file path for the current svg.gz file"
-  (format nil "~a/~a.svg.gz" +paintr-directory-path+ +current-id+))
+  (format nil "~a/~a.svg.gz" *paintr-directory-path* +current-id+))
 
 (defun svgz-file-path ()
   "The absolute file path for the current svgz file"
-  (format nil "~a/~a.svgz" +paintr-directory-path+ +current-id+))
+  (format nil "~a/~a.svgz" *paintr-directory-path* +current-id+))
 
 (defun description-file-path () 
   "The absolute file path for the html description of the current svg file"
-  (format nil "~a/~a.html" +paintr-directory-path+ +current-id+))
+  (format nil "~a/~a.html" *paintr-directory-path* +current-id+))
 
 ;;FIXME Divide into functions and allow to fail gracefully
 
@@ -323,7 +322,9 @@ which had the " . tag_or_tags ($flickr_photo_tags) .  " " .
   (when (probe-file (jpeg-file-path))
     (delete-file (jpeg-file-path)))
   (when (probe-file (svg-file-path))
-    (delete-file (svg-file-path))))
+    (delete-file (svg-file-path)))
+  (when (probe-file (svg-gz-file-path))
+    (delete-file (svg-gz-file-path))))
 
 (defun paintr ()
   "Do everything."

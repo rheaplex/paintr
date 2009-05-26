@@ -43,6 +43,7 @@ if ($id)
 <html>
 <head>
 <title>paintr image <?php echo $id ?></title>
+<link href="rss.xml" type="application/rss+xml" rel="alternate" title="Paintr RSS Feed" />
 <style type="text/css">
 body {font-family:Helvetica,Verdana,Arial,sans-serif}
 p {font-size:8pt}
@@ -58,6 +59,10 @@ echo file_get_contents ("./" . $id . ".html");
 <hr />
 <p>To find out more about me click 
 <?php echo "<a href='./about.php?id=$id'>"?>here</a>.
+
+<br />
+<a href="./rss.xml"><img src="feed-icon-14x14.png" height="14" width="14" border="0" /> RSS 2.0 feed of images.</a>
+
 </p>
 <hr />
 
@@ -88,7 +93,6 @@ if ($id != $current_id)
      $navigation = $navigation . "next&nbsp;&nbsp;newest";
    }
 echo $navigation;
-?>
-</p>
+?></p>
 </body>
 </html>
