@@ -18,8 +18,6 @@
 
 ;; TODO - Set base url in configuration.
 
-(asdf:operate 'asdf:load-op :babel)
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Configuration
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -35,10 +33,11 @@
 ;; Encoding is to handle high byte characters in names from flickr
 
 (defparameter +rss-header+ "<?xml version=\"1.0\" encoding=\"utf-8\"?>
-<rss version=\"2.0\">
+<rss version=\"2.0\" xmlns:atom=\"http://www.w3.org/2005/Atom\">
   <channel>
     <title>paintr</title>
     <link>http://www.robmyers.org/paintr/</link>
+    <atom:link href=\"http://robmyers.org/paintr/rss.xml\" rel=\"self\" type=\"application/rss+xml\" />
     <description>Images by paintr.</description>
     <language>en</language>
 ")
@@ -76,15 +75,25 @@
       (read-sequence text file)
       text)))
 
+(defun timestamp-from-comment (html)
+  "Extract the rss timestampfrom a comment in html, or return the empty string"
+  (let ((start (search "<!--" html)) 
+	(end (search "-->" html))) 
+    (if (and start end)
+	(subseq html (+ start 4) end)
+	"")))
+
 (defun write-item (stream id)
   "Write the item entry for the id"
-  (format stream "   <item>
+  (let ((description (slurp-utf-8-file (html-file-path id))))
+    (format stream "   <item>
       <title>paintr image ~a</title>
       <link>http://www.robmyers.org/paintr/index.php?image=~a</link>
       <guid>http://www.robmyers.org/paintr/index.php?image=~a</guid>
+      <pubDate>~a</pubDate>
       <description><![CDATA[<p><a href=\"http://www.robmyers.org/paintr/index.php?image=~a\">paintr image ~a</a></p>~a]]></description>
     </item>
-" id id id id id (slurp-utf-8-file (html-file-path id))))
+" id id id (timestamp-from-comment description) id id description)))
 
 (defun write-items (stream current-id)
   "Write the items for the RSS"
