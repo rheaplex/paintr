@@ -33,15 +33,6 @@
 (defvar *flickr-api-key* "")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Utilities
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defun die (reason)
-  "Alert and quit"
-  (print reason)
-  (quit))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Call local command line tools
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -272,7 +263,7 @@
 
 (defun format-tags (tag-list)
   "Format the tags into a comma-separated list"
-  (format nil "<i>~{~a~^, ~}</i>" 
+  (format nil "~{~a~^, ~}" 
 	  (map 'list 
 	       #'cl-who:escape-string  
 	       tag-list)))
@@ -297,24 +288,32 @@ which had the " . tag_or_tags ($flickr_photo_tags) .  " " .
 		   "Sep" "Oct" "Nov" "Dec"))
 	    year hours minutes seconds)))
 
-(defun save-writeup (filename palette-name palette-tags photourl photoname 
-		     photousername)
+(defun palette-description (name tags)
+  (format nil "I found a palette at colr called '~a' with the following ~a: <i>~a</i>."
+	  (cl-who:escape-string name)
+	  (tag-or-tags tags)
+	  (format-tags tags)))
+
+(defun photo-description (url name)
+  (format nil "I searched for those tags on flickr and found an image called <a href=\"~a\">~a</a>."url name))
+
+(defun photo-user-description (username)
+  (format nil "Photo by ~a." username))
+
+(defun save-writeup (filename description)
   "Save an html fragment describing how the work was made and satisfying BY-SA"
   (with-open-file (file filename :direction :output 
 			:if-exists :supersede
 			:external-format :utf-8)
-    (format file "<!--~a--><strong>How I made this image.</strong><br />~%I found a palette at colr called '~a' with the following ~a: ~a.<br />~%I searched for those tags on flickr and found an image called <a href=\"~a\">~a</a> by ~a.<br />~%I traced that using autotrace and applied the colr palette to it.<br />~%This image is licenced under the <a href='http://creativecommons.org/licenses/by-sa/3.0/'>~%Creative Commons Attribution Share-Alike Licence</a>"
+    (format file "<!--~a--><strong>How I made this image.</strong><br />~a~%This image is licenced under the <a href='http://creativecommons.org/licenses/by-sa/3.0/'>Creative Commons Attribution Share-Alike Licence</a>"
 	    (current-rfc-822-time)	    
-	    (cl-who:escape-string palette-name)
-	    (tag-or-tags palette-tags)
-	    (format-tags palette-tags)
-	    photourl 
-	    (cl-who:escape-string photoname)
-	    (cl-who:escape-string photousername))))
+	    description)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Main flow of control
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defvar *tries* 0)
 
 (defun jpeg-file-path ()
   "The absolute file path for the local copy of the current flickr jpeg file"
@@ -347,67 +346,120 @@ which had the " . tag_or_tags ($flickr_photo_tags) .  " " .
   (when (probe-file (svg-gz-file-path))
     (delete-file (svg-gz-file-path))))
 
+(defun process-data-locally (photojpegurl description colours)
+  "Having got all the data, fetch the image file and generate the local files"
+  (format t "Doing local stuff~%")
+  (wget photojpegurl (jpeg-file-path))
+  (format t "Got jpeg.~%")
+  (autotrace (jpeg-file-path) 
+	     (svg-file-path) 
+	     (length colours))
+  (format t "Made autotraced svg.~%")
+  (let ((svg-text nil))
+    (with-open-file (file (svg-file-path))
+      (setf svg-text (make-string (file-length file)))
+      (read-sequence svg-text file))
+    (setf svg-text (fix-svg svg-text))
+    (setf svg-text (recolour-svg svg-text colours))
+    (format t "Modified svg.~%")
+    (with-open-file (file (svg-file-path) 
+			  :direction :output 
+			  :if-exists :supersede)
+      (write-sequence svg-text file)
+      (format t "Wrote modified svg.~%")))
+  (gzip (svg-file-path))
+  (format t "Gzipped svg.~%")
+  (rename-file (svg-gz-file-path) (svgz-file-path))
+  (format t "Renamed svg file.~%")
+  (save-writeup (description-file-path) description)
+  (format t "Saved writeup html.~%")
+  (save-current-id)
+  (format t "Wrote new current id.~%"))
+
+(defun parse-photo-user (photouserxml photourl description colours)
+  "Parse the photo user then go on to local stuff or bail"
+  (format t "Parsing photo owner info~%")
+  (let ((username (person-username photouserxml)))
+    (if username
+	(process-data-locally photourl
+			      (format nil "~a ~a" 
+				      description
+				      (photo-user-description username))
+			      colours)
+	(progn
+	  (incf *tries*)
+	  (sleep 60)
+	  (get-palette)))))
+
+(defun get-photo-user (ownerid photourl description colours)
+  "Get the photo user xml then parse it, or wait and try again"
+  (format t "Getting photo owner info~%")
+  (let ((photouserxml (flickr-person-details ownerid)))
+    (if photouserxml
+	(parse-photo-user photouserxml photourl description colours)
+	(progn
+	  (incf *tries*)
+	  (sleep 60)
+	  (get-photo-user ownerid photourl description colours)))))
+
+(defun parse-photo (photoxml description colours)
+  "Parse the photo xml then go on to get the photo user or start again"
+  (format t "Parsing photo info~%")
+  (let ((phototitle (photo-title photoxml))
+	(photourl (photo-jpeg-url photoxml))
+	(photoid (photo-id photoxml))
+	(ownerid (photo-owner-id photoxml)))
+    (format t "Photo - ~a ~a ~a ~a~%" (cl-who:escape-string phototitle) 
+	    photourl photoid ownerid)
+    (if (and phototitle photourl photoid ownerid)
+	(get-photo-user ownerid photourl
+			(format nil "~a<br />~%~a" description
+				(photo-description photourl phototitle))
+			colours)
+	(get-palette))))
+
+(defun get-photo (paltags description colours)
+  "Find a photo matching the tags then process it, start again if no match"
+  (format t "Getting photo info~%")
+  (let ((photoxml (flickr-photo-tag-search paltags))) 
+    (if photoxml
+	(parse-photo photoxml description colours)
+	(progn
+	  (incf *tries*)
+	  (sleep 60) 
+	  (get-photo paltags description colours)))))
+
+(defun parse-palette (palxml)
+  "Parse the palette then go on to find a photo matching it or start again"
+  (format t "Parsing palette~%")
+  (let ((palname (palette-name palxml) )
+	(paltags (palette-tags palxml))
+	(palcolours (palette-colours palxml)))
+    (format t "Tags - ~a~%" (format-tags paltags))
+    (if (and palname paltags palcolours)
+	(get-photo paltags (palette-description palname paltags) palcolours)
+	(get-palette))))
+
+(defun get-palette ()
+  "Get the palette then process it, sleep a bit then retry if fetching fails"
+  (format t "Getting palette~%")
+  (when (> *tries* 20)
+    (format t "Too many tries at contacting servers. Quitting.~%")
+    (quit))
+  (let ((palxml (colr-random-palette)))
+    (if palxml
+	(parse-palette palxml)
+	(progn
+	  (incf *tries*)
+	  (sleep 60) 
+	  (get-palette)))))
+  
 (defun paintr ()
   "Do everything."
+  (setf *tries* 0)
   (load-current-id)
-  (let ((palxml (colr-random-palette)))
-    (loop for i from 0 below 12
-      until palxml
-      do (sleep 10)
-      do (setf palxml (colr-random-palette)))
-    (when palxml
-      (format t "Got palette xml.~%")
-      (let ((palname (palette-name palxml))
-	    (paltags (palette-tags palxml))
-	    (palcolours (palette-colours palxml)))
-	(when (not palname)
-	  (format t "Palette XML fail~% ~a~%" palxml))
-	(when (and palname paltags palcolours)
-	  (format t "Parsed palette details.~%")
-	  (format t "Tags - ~a~%" (format-tags paltags))
-	  (let ((photoxml (flickr-photo-tag-search paltags)))
-	    (when photoxml
-	      (format t "Got photo xml.~%")
-	      (let ((photoname (photo-title photoxml))
-		    (photojpegurl (photo-jpeg-url photoxml))
-		    (photoid (photo-id photoxml))
-		    (photouserid (photo-owner-id photoxml)))
-		(when (not photoname)
-		    (format t "Photo XML fail~% ~a~%" photoxml))
-		(when (and photoname photojpegurl photouserid)
-		  (format t "Parsed photo details.~%")
-		  (let ((photouserxml (flickr-person-details photouserid)))
-		    (when photouserxml
-		      (format t "Got photo user xml.~%")
-		      (let ((photousername (person-username photouserxml)))
-			(wget photojpegurl (jpeg-file-path))
-			(format t "Got jpeg.~%")
-			(autotrace (jpeg-file-path) 
-				   (svg-file-path) 
-				   (length palcolours))
-			(format t "Made autotraced svg.~%")
-			(let ((svg-text nil))
-			  (with-open-file (file (svg-file-path))
-			    (setf svg-text (make-string (file-length file)))
-			    (read-sequence svg-text file))
-			  (setf svg-text (fix-svg svg-text))
-			  (setf svg-text (recolour-svg svg-text palcolours))
-			  (format t "Modified svg.~%")
-			  (with-open-file (file (svg-file-path) 
-						:direction :output 
-						:if-exists :supersede)
-			    (write-sequence svg-text file)))
-			(format t "Wrote modified svg.~%")
-			(gzip (svg-file-path))
-			(format t "Gzipped svg.~%")
-			(rename-file (svg-gz-file-path) (svgz-file-path))
-			(format t "Renamed svg file.~%")
-			(save-writeup (description-file-path) palname paltags 
-				      (photo-html-url photoid photouserxml) 
-				      photoname photousername))
-		      (format t "Saved writeup html.~%")
-		      (save-current-id)
-		      (format t "Wrote new current id.~%")))))))))))
+  (format t "Loaded current id~%")
+  (get-palette)
   (cleanup)
   (format t "Cleaned up.~%"))
 
