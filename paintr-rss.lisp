@@ -18,13 +18,15 @@
 
 ;; TODO - Set base url in configuration.
 
+(asdf:operate 'asdf:load-op :babel)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Configuration
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defvar *item-count* 5)
 
-(defvar *paintr-web-path* "./")
+(defvar *paintr-directory-path* "./")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Templates
@@ -32,7 +34,7 @@
 
 ;; Encoding is to handle high byte characters in names from flickr
 
-(defparameter +rss-header+ "<?xml version=\"1.0\" encoding=\"iso-8859-1\"?>
+(defparameter +rss-header+ "<?xml version=\"1.0\" encoding=\"utf-8\"?>
 <rss version=\"2.0\">
   <channel>
     <title>paintr</title>
@@ -66,9 +68,10 @@
   (with-open-file (id-file (current-id-file-path))
     (read id-file)))
 
-(defun slurp-file (file-path)
+(defun slurp-utf-8-file (file-path)
   "Slurp the contents of the file into a string"
-  (with-open-file (file file-path)
+  (with-open-file (file file-path
+			:external-format :utf-8)
     (let ((text (make-string (file-length file))))
       (read-sequence text file)
       text)))
@@ -81,7 +84,7 @@
       <guid>http://www.robmyers.org/paintr/index.php?image=~a</guid>
       <description><![CDATA[<p><a href=\"http://www.robmyers.org/paintr/index.php?image=~a\">paintr image ~a</a></p>~a]]></description>
     </item>
-" id id id id id (slurp-file (html-file-path id))))
+" id id id id id (slurp-utf-8-file (html-file-path id))))
 
 (defun write-items (stream current-id)
   "Write the items for the RSS"
@@ -93,7 +96,9 @@
 (defun generate-rss ()
   "Generate a simple rss feed for the most recent items."
   (with-open-file (file (rss-file-path) 
-			:direction :output :if-exists :supersede)
+			:direction :output
+			:if-exists :supersede
+			:external-format :utf-8)
     (format file +rss-header+)
     (write-items file (read-current-id))
     (format file +rss-footer+)))
