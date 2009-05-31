@@ -22,6 +22,7 @@
 
 (require 'cl-ppcre)
 (require 'drakma)
+(require 'cl-who)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Configuration
@@ -271,7 +272,10 @@
 
 (defun format-tags (tag-list)
   "Format the tags into a comma-separated list"
-  (format nil "<i>~{~a~^, ~}</i>" tag-list))
+  (format nil "<i>~{~a~^, ~}</i>" 
+	  (map 'list 
+	       #'cl-who:escape-string  
+	       tag-list)))
 
 #|
 which had the " . tag_or_tags ($flickr_photo_tags) .  " " . 
@@ -283,7 +287,7 @@ which had the " . tag_or_tags ($flickr_photo_tags) .  " " .
   "Return a string representing the current rfc 822 time"
   (multiple-value-bind (seconds minutes hours day month year day-of-the-week 
 				 daylight-savings-time-flag time-zone)
-			(get-decoded-time)  
+      (decode-universal-time (get-universal-time) 0) 
     (declare (ignore day-of-the-week daylight-savings-time-flag time-zone))
     (format nil "~a ~a ~a ~2,'0d:~2,'0d:~2,'0d GMT" 
 	    day
@@ -301,12 +305,12 @@ which had the " . tag_or_tags ($flickr_photo_tags) .  " " .
 			:external-format :utf-8)
     (format file "<!--~a--><strong>How I made this image.</strong><br />~%I found a palette at colr called '~a' with the following ~a: ~a.<br />~%I searched for those tags on flickr and found an image called <a href=\"~a\">~a</a> by ~a.<br />~%I traced that using autotrace and applied the colr palette to it.<br />~%This image is licenced under the <a href='http://creativecommons.org/licenses/by-sa/3.0/'>~%Creative Commons Attribution Share-Alike Licence</a>"
 	    (current-rfc-822-time)	    
-	    palette-name
+	    (cl-who:escape-string palette-name)
 	    (tag-or-tags palette-tags)
 	    (format-tags palette-tags)
 	    photourl 
-	    photoname 
-	    photousername)))
+	    (cl-who:escape-string photoname)
+	    (cl-who:escape-string photousername))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Main flow of control
