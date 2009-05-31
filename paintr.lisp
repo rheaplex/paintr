@@ -279,11 +279,28 @@ which had the " . tag_or_tags ($flickr_photo_tags) .  " " .
     "
 |#
 
+(defun current-rfc-822-time ()
+  "Return a string representing the current rfc 822 time"
+  (multiple-value-bind (seconds minutes hours day month year day-of-the-week 
+				 daylight-savings-time-flag time-zone)
+			(get-decoded-time)  
+    (declare (ignore day-of-the-week daylight-savings-time-flag time-zone))
+    (format nil "~a ~a ~a ~2,'0d:~2,'0d:~2,'0d GMT" 
+	    day
+	    (nth (1- month) 
+		 '("Jan" "Feb" "Mar" "Apr"
+		   "May" "Jun" "Jul" "Aug"
+		   "Sep" "Oct" "Nov" "Dec"))
+	    year hours minutes seconds)))
+
 (defun save-writeup (filename palette-name palette-tags photourl photoname 
 		     photousername)
   "Save an html fragment describing how the work was made and satisfying BY-SA"
-  (with-open-file (file filename :direction :output :if-exists :supersede)
-    (format file "<strong>How I made this image.</strong><br />~%I found a palette at colr called '~a' with the following ~a: ~a.<br />~%I searched for those tags on flickr and found an image called <a href=\"~a\">~a</a> by ~a.<br />~%I traced that using autotrace and applied the colr palette to it.<br />~%This image is licenced under the <a href='http://creativecommons.org/licenses/by-sa/3.0/'>~%Creative Commons Attribution Share-Alike Licence</a>"
+  (with-open-file (file filename :direction :output 
+			:if-exists :supersede
+			:external-format :utf-8)
+    (format file "<!--~a--><strong>How I made this image.</strong><br />~%I found a palette at colr called '~a' with the following ~a: ~a.<br />~%I searched for those tags on flickr and found an image called <a href=\"~a\">~a</a> by ~a.<br />~%I traced that using autotrace and applied the colr palette to it.<br />~%This image is licenced under the <a href='http://creativecommons.org/licenses/by-sa/3.0/'>~%Creative Commons Attribution Share-Alike Licence</a>"
+	    (current-rfc-822-time)	    
 	    palette-name
 	    (tag-or-tags palette-tags)
 	    (format-tags palette-tags)
