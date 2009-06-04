@@ -26,7 +26,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Configuration
-;; Set these by loading a Lisp file before this one that defvars them.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defvar *paintr-directory-path* "./")
@@ -376,6 +375,9 @@ which had the " . tag_or_tags ($flickr_photo_tags) .  " " .
   (save-current-id)
   (format t "Wrote new current id.~%"))
 
+;; Silence SBCL's fear of mutually recursive functions
+(defgeneric get-palette ())
+
 (defun parse-photo-user (photouserxml photourl description colours)
   "Parse the photo user then go on to local stuff or bail"
   (format t "Parsing photo owner info~%")
@@ -439,8 +441,8 @@ which had the " . tag_or_tags ($flickr_photo_tags) .  " " .
     (if (and palname paltags palcolours)
 	(get-photo paltags (palette-description palname paltags) palcolours)
 	(get-palette))))
-
-(defun get-palette ()
+  
+(defmethod get-palette ()
   "Get the palette then process it, sleep a bit then retry if fetching fails"
   (format t "Getting palette~%")
   (when (> *tries* 20)
@@ -453,7 +455,7 @@ which had the " . tag_or_tags ($flickr_photo_tags) .  " " .
 	  (incf *tries*)
 	  (sleep 60) 
 	  (get-palette)))))
-  
+
 (defun paintr ()
   "Do everything."
   (setf *tries* 0)
@@ -463,5 +465,10 @@ which had the " . tag_or_tags ($flickr_photo_tags) .  " " .
   (cleanup)
   (format t "Cleaned up.~%"))
 
-;;(paintr)
-;;(quit)
+(defun run ()
+  (unless (= (length *posix-argv*) 3)
+    (format t "Pass output directory and flickr api key as parameters."))
+  (setf *paintr-directory-path* (second *posix-argv*))
+  (setf *flickr-api-key* (third *posix-argv*))
+  (paintr)
+  (quit))

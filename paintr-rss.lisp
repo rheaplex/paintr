@@ -111,3 +111,13 @@
     (format file +rss-header+)
     (write-items file (read-current-id))
     (format file +rss-footer+)))
+
+(defun run ()
+  (unless (= (length *posix-argv*) 3)
+    (format t "Pass output directory and item count as parameters.")
+    (quit))
+  (setf *paintr-directory-path* (second *posix-argv*))
+  (setf *item-count* (parse-integer (third *posix-argv*)))
+  (generate-rss)
+  (quit))
+
