@@ -114,7 +114,7 @@
 
 (defun run ()
   (unless (= (length *posix-argv*) 3)
-    (format t "Pass output directory and item count as parameters.")
+    (format t "Pass output directory and item count as parameters.~%")
     (quit))
   (setf *paintr-directory-path* (second *posix-argv*))
   (setf *item-count* (parse-integer (third *posix-argv*)))
