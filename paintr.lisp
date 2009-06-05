@@ -295,7 +295,7 @@ which had the " . tag_or_tags ($flickr_photo_tags) .  " " .
   (format nil "I searched for those tags on flickr and found an image called <a href=\"~a\">~a</a>." url (cl-who:escape-string name)))
 
 (defun photo-user-description (username)
-  (format nil "Photo by ~a." (cl-who:escape-string name username)))
+  (format nil "Photo by ~a." (cl-who:escape-string username)))
 
 (defun save-writeup (filename description)
   "Save an html fragment describing how the work was made and satisfying BY-SA"
