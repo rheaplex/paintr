@@ -101,7 +101,7 @@
 (defun palette-name (palette)
   "Get the name from the palette XML"
   (ppcre:register-groups-bind (title) ("<title>(.+?)( \\(colr.org\\))?<\\/title>" palette)
-    title))
+			      title))
 
 (defun palette-tags (palette)
   "Get the tags from the palette XML"
@@ -171,9 +171,9 @@
 
 (defun photo-title (flickr-photo-xml)
   "Get the photo's title from a single photo's xml"
-  (ppcre:register-groups-bind (id) ("title=\\\"([^\\\"]+)\\\"" 
+  (ppcre:register-groups-bind (title) ("title=\\\"([^\\\"]+)\\\"" 
 				    flickr-photo-xml)
-    id))
+			      title))
 
 (defun photo-owner-id (flickr-photo-xml)
   "Get the owner id from a single photo's xml"
@@ -197,7 +197,7 @@
   "Get the person's name from a single person's xml"
   (ppcre:register-groups-bind (name) ("<username>([^<]*)</username>" 
 				    person-xml)
-    name))
+			      name))
 
 (defun person-profile-url (person-xml)
   "Get the person's profile url from a single person's xml"
@@ -263,9 +263,7 @@
 (defun format-tags (tag-list)
   "Format the tags into a comma-separated list"
   (format nil "~{~a~^, ~}" 
-	  (map 'list 
-	       #'cl-who:escape-string  
-	       tag-list)))
+	  (map 'list #'cl-who:escape-string tag-list)))
 
 #|
 which had the " . tag_or_tags ($flickr_photo_tags) .  " " . 
@@ -294,10 +292,10 @@ which had the " . tag_or_tags ($flickr_photo_tags) .  " " .
 	  (format-tags tags)))
 
 (defun photo-description (url name)
-  (format nil "I searched for those tags on flickr and found an image called <a href=\"~a\">~a</a>."url name))
+  (format nil "I searched for those tags on flickr and found an image called <a href=\"~a\">~a</a>." url (cl-who:escape-string name)))
 
 (defun photo-user-description (username)
-  (format nil "Photo by ~a." username))
+  (format nil "Photo by ~a." (cl-who:escape-string name username)))
 
 (defun save-writeup (filename description)
   "Save an html fragment describing how the work was made and satisfying BY-SA"
@@ -467,7 +465,8 @@ which had the " . tag_or_tags ($flickr_photo_tags) .  " " .
 
 (defun run ()
   (unless (= (length *posix-argv*) 3)
-    (format t "Pass output directory and flickr api key as parameters."))
+    (format t "Pass output directory and flickr api key as parameters.~%")
+    (quit))
   (setf *paintr-directory-path* (second *posix-argv*))
   (setf *flickr-api-key* (third *posix-argv*))
   (paintr)
