@@ -1,23 +1,21 @@
 <?php
 
-// Copyright 2005, 2009 Rob Myers <rob@robmyers.org>    
+// Copyright 2005, 2009 Rob Myers <rob@robmyers.org>
 //     
-// This file is part of paintr.
-// 
-// paintr is free software; you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 3 of the License, or
-// (at your option) any later version.
-// 
-// paintr is distributed in the hope that it will be useful,
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as
+// published by the Free Software Foundation, either version 3 of the
+// License, or (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-// 
-// You should have received a copy of the GNU General Public License
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-$id_string = file_get_contents ("./current-id");
+$id_string = (int)file_get_contents ("./current-id");
 $current_id = 0 + $id_string;
 
 // Get the current image id
@@ -57,12 +55,10 @@ p {font-size:8pt}
 echo file_get_contents ("./" . $id . ".html");
 ?>
 <hr />
-<p>To find out more about me click 
+<p>To find out more about me and to get my source code click 
 <?php echo "<a href='./about.php?id=$id'>"?>here</a>.
-
 <br />
 <a href="./rss.xml"><img src="feed-icon-14x14.png" height="14" width="14" border="0" /> RSS 2.0 feed of images.</a>
-
 </p>
 <hr />
 
