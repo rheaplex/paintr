@@ -27,7 +27,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defvar *paintr-directory-path* "./")
-(defvar *flickr-api-key* "")
+(defvar *flickr-api-key* "98170ee24764224d926092360a20da8f")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Call local command line tools
@@ -141,6 +141,12 @@
 				    flickr-photo-xml)
      id))
 
+(defun owner-id (flickr-photo-xml)
+  "Get the owner id from a single photo's xml"
+  (ppcre:register-groups-bind (id) ("owner=\\\"([^\\\"]+)\\\"" 
+				    flickr-photo-xml)
+     id))
+
 (defun server-id (flickr-photo-xml)
   "Get the server id from a single photo's xml"
   (ppcre:register-groups-bind (id) ("server=\\\"([^\\\"]+)\\\"" 
@@ -166,6 +172,12 @@
 	  (server-id flickr-photo-list-xml)
 	  (photo-id flickr-photo-list-xml)
 	  (secret-id flickr-photo-list-xml)))
+
+(defun photo-page-url (flickr-photo-list-xml)
+  "Construct the page url for a single photo from its xml"
+  (format nil "http://www.flickr.com/photos/~a/~a"
+	  (owner-id flickr-photo-list-xml)
+	  (photo-id flickr-photo-list-xml)))
 
 (defun photo-title (flickr-photo-xml)
   "Get the photo's title from a single photo's xml"
@@ -194,6 +206,12 @@
 (defun person-username (person-xml)
   "Get the person's name from a single person's xml"
   (ppcre:register-groups-bind (name) ("<username>([^<]*)</username>" 
+				    person-xml)
+			      name))
+
+(defun person-id (person-xml)
+  "Get the person's id from a single person's xml"
+  (ppcre:register-groups-bind (name) ("nsid=\\\"([^\\\"]+)\\\"" 
 				    person-xml)
 			      name))
 
@@ -292,15 +310,16 @@ which had the " . tag_or_tags ($flickr_photo_tags) .  " " .
 (defun photo-description (url name)
   (format nil "I searched for those tags on flickr and found an image called <a href=\"~a\">~a</a>." url (cl-who:escape-string name)))
 
-(defun photo-user-description (username)
-  (format nil "Photo by ~a." (cl-who:escape-string username)))
+(defun photo-user-description (username userurl)
+  (format nil "Photo by <a href=\"~a\">~a</a>"
+	  userurl (cl-who:escape-string username)))
 
 (defun save-writeup (filename description)
   "Save an html fragment describing how the work was made and satisfying BY-SA"
   (with-open-file (file filename :direction :output 
 			:if-exists :supersede
 			:external-format :utf-8)
-    (format file "<!--~a--><strong>How I made this image.</strong><br />~a~%This image is licenced under the <a href='http://creativecommons.org/licenses/by-sa/3.0/'>Creative Commons Attribution Share-Alike Licence</a>"
+    (format file "<!--~a--><strong>How I made this image.</strong><br />~a~%<br />This image is licenced under the <a href='http://creativecommons.org/licenses/by-sa/3.0/'>Creative Commons Attribution Share-Alike Licence</a>"
 	    (current-rfc-822-time)	    
 	    description)))
 
@@ -377,12 +396,14 @@ which had the " . tag_or_tags ($flickr_photo_tags) .  " " .
 (defun parse-photo-user (photouserxml photourl description colours)
   "Parse the photo user then go on to local stuff or bail"
   (format t "Parsing photo owner info~%")
-  (let ((username (person-username photouserxml)))
+  (let ((username (person-username photouserxml))
+	(userurl (person-profile-url photouserxml)))
     (if username
 	(process-data-locally photourl
 			      (format nil "~a ~a" 
 				      description
-				      (photo-user-description username))
+				      (photo-user-description username
+							      userurl))
 			      colours)
 	(progn
 	  (incf *tries*)
@@ -404,7 +425,7 @@ which had the " . tag_or_tags ($flickr_photo_tags) .  " " .
   "Parse the photo xml then go on to get the photo user or start again"
   (format t "Parsing photo info~%")
   (let ((phototitle (photo-title photoxml))
-	(photourl (photo-jpeg-url photoxml))
+	(photourl (photo-page-url photoxml))
 	(photoid (photo-id photoxml))
 	(ownerid (photo-owner-id photoxml)))
     (format t "Photo - ~a ~a ~a ~a~%" (cl-who:escape-string phototitle) 
