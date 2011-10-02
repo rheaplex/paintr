@@ -35,6 +35,9 @@
 
 (defun autotrace (input-file-path output-file-path colour-count)
   "Convert the input file to svg with colour-count colours"
+  ;;FIXME: This fails silently if autotrace isn't installed
+  ;;       In fact these will all fail in that circumstance.
+  ;;       So move the run call into its own function and handle things better
   (sb-ext:run-program "autotrace" (list "--output-format" "svg"
 					"--output-file" output-file-path
 					"--color-count" (format nil 
